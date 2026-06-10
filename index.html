@@ -957,23 +957,23 @@ function getMatchMultiplier(mid){
 // FIREBASE STORAGE
 // ═══════════════════════════════════════════════════
 async function saveState(){
-  try{await db.ref('miral_wc2026').set(appState);}
-  catch(e){console.error('Save error:',e);try{localStorage.setItem('miral_wc2026_v2',JSON.stringify(appState));}catch(e2){}}
+  try{await db.ref('WC2026Prdct').set(appState);}
+  catch(e){console.error('Save error:',e);try{localStorage.setItem('WC2026Prdct_v2',JSON.stringify(appState));}catch(e2){}}
 }
 
 async function loadState(){
   try{
-    const snapshot=await db.ref('miral_wc2026').once('value');
+    const snapshot=await db.ref('WC2026Prdct').once('value');
     const data=snapshot.val();
     if(data){appState={players:data.players||{},results:data.results||{},predictions:data.predictions||{},departments:data.departments||[...DEFAULT_DEPTS],knockoutMatches:data.knockoutMatches||[]};}
   }catch(e){
     console.error('Load error:',e);
-    try{const ls=localStorage.getItem('miral_wc2026_v2');if(ls){const p=JSON.parse(ls);appState={players:{},results:{},predictions:{},departments:[...DEFAULT_DEPTS],knockoutMatches:[],...p};}}catch(e2){}
+    try{const ls=localStorage.getItem('WC2026Prdct_v2');if(ls){const p=JSON.parse(ls);appState={players:{},results:{},predictions:{},departments:[...DEFAULT_DEPTS],knockoutMatches:[],...p};}}catch(e2){}
   }
 }
 
 function setupRealtimeSync(){
-  db.ref('miral_wc2026').on('value',(snapshot)=>{
+  db.ref('WC2026Prdct').on('value',(snapshot)=>{
     if(!realtimeSyncEnabled)return;
     const data=snapshot.val();if(!data)return;
     appState={players:data.players||{},results:data.results||{},predictions:data.predictions||{},departments:data.departments||[...DEFAULT_DEPTS],knockoutMatches:data.knockoutMatches||[]};
