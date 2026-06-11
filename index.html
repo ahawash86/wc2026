@@ -802,8 +802,6 @@ let countdownInterval = null;
 // ═══════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════
-const ADMIN_USERNAME = 'Admin';
-const ADMIN_PASSWORD = 'admin123';
 let tzOffset = 4;
 let sortMode = 'group';
 
@@ -1206,17 +1204,31 @@ async function login(){
   document.getElementById('loginModal').classList.add('hidden');initApp();showToast(`Welcome back, ${player.name}! ⚽`,'gold');
 }
 
-function adminLogin(){
-  const user=document.getElementById('adminUser').value.trim();
-  const pw=document.getElementById('adminPw').value;
-  const err=document.getElementById('adminError');
-  if(user!==ADMIN_USERNAME||pw!==ADMIN_PASSWORD){err.classList.remove('hidden');document.getElementById('adminPw').value='';return;}
-  err.classList.add('hidden');isAdmin=true;
-  document.getElementById('adminLoginModal').classList.add('hidden');
-  currentUser={id:'__admin__',name:'Admin',dept:'System',teamFlag:'⚙️',team:'–'};
-  initApp();showToast('Admin access granted.','gold');
-}
+async function adminLogin() {
+  const userField = document.getElementById("adminUser").value.trim();
+  const pwField = document.getElementById("adminPw").value;
+  const errorAlert = document.getElementById("adminError");
 
+  try {
+    // Safely look up the password string value from your Firebase Database tree
+    const snapshot = await db.ref('adminPassword').once('value');
+    const secureAdminPassword = snapshot.val();
+
+    if (userField === 'Admin' && pwField === secureAdminPassword) {
+      isAdmin = true;
+      errorAlert.classList.add("hidden");
+      closeAdminLogin();
+      showSection('admin');
+    } else {
+      errorAlert.textContent = "Incorrect credentials.";
+      errorAlert.classList.remove("hidden");
+    }
+  } catch (error) {
+    console.error("Authentication failed:", error);
+    errorAlert.textContent = "Connection error. Please try again.";
+    errorAlert.classList.remove("hidden");
+  }
+}
 function signOut(){currentUser=null;isAdmin=false;realtimeSyncEnabled=false;location.reload();}
 
 // ═══════════════════════════════════════════════════
