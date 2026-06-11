@@ -1211,7 +1211,7 @@ async function adminLogin() {
 
   try {
     // Safely look up the password string value from your Firebase Database tree
-    const snapshot = await db.ref('adminPassword').once('value');
+    const snapshot = await db.ref('WC2026Prdct/adminPassword').once('value');
     const secureAdminPassword = snapshot.val();
 
     if (userField === 'Admin' && pwField === secureAdminPassword) {
