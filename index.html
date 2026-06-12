@@ -803,7 +803,7 @@ let countdownInterval = null;
 // CONSTANTS
 // ═══════════════════════════════════════════════════
 let tzOffset = 4;
-let sortMode = 'group';
+let sortMode = 'date';
 
 const STAGE_MULTIPLIERS = { GROUP:1, R32:1, QF:2, SF:3, FINAL:5 };
 const STAGE_LABELS = { R32:'Round of 32', QF:'Quarter-Final', SF:'Semi-Final', FINAL:'Final' };
@@ -1267,7 +1267,14 @@ function renderMatches(){
   renderTodayMatches();
   const container=document.getElementById('matchesContainer');
   container.innerHTML='';
-  const allM=getAllMatches();
+  
+  // Get today's tracking key
+  const tk=todayKey();
+  
+  // Exclude today's matches from the regular sections
+  const allM=getAllMatches().filter(m => getDateKey(m.utc) !== tk);
+  const filteredMatchesArray=MATCHES.filter(m => getDateKey(m.utc) !== tk);
+
   if(sortMode==='knockout'){
     // Group stage first
     const gs=allM.filter(m=>m.stage==='GROUP');
@@ -1302,7 +1309,7 @@ function renderMatches(){
     });
   } else {
     Object.entries(GROUPS).forEach(([gk,grp])=>{
-      const gm=MATCHES.filter(m=>m.group===gk);
+      const gm=filteredMatchesArray.filter(m=>m.group===gk);
       const s=document.createElement('div');s.className='group-section';
       s.innerHTML=`<div class="group-header"><span class="group-label">GROUP ${gk}</span><span class="group-teams">${grp.teams.map(t=>getTeam(t).flag).join(' ')} ${grp.teams.join(' · ')}</span></div>`;
       gm.forEach(m=>s.appendChild(buildMatchCard(m)));
@@ -1901,6 +1908,18 @@ function normalizeTeamName(apiName) {
   return translationTable[trimmedName] || trimmedName;
 }
 
+function isMatchToday(matchDateString) {
+    if (!matchDateString) return false;
+    
+    const matchDate = new Date(matchDateString);
+    const today = new Date();
+    
+    return matchDate.getDate() === today.getDate() &&
+           matchDate.getMonth() === today.getMonth() &&
+           matchDate.getFullYear() === today.getFullYear();
+}
+
+  
 async function fetchLiveScoresFromAPI() {
   const apiKey = document.getElementById('footballDataApiKey').value.trim();
   if (!apiKey) {
