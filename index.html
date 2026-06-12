@@ -965,10 +965,10 @@ function getMatchMultiplier(mid){
 // ═══════════════════════════════════════════════════
 async function saveState() {
   try {
-    // Back up data to local device memory
+    // Keep a local backup in the browser
     localStorage.setItem('wc2026_appState', JSON.stringify(appState));
     
-    // Save collections individually so they NEVER overwrite other folders
+    // Save collections individually to their exact paths
     await db.ref('WC2026Prdct/players').set(appState.players || []);
     await db.ref('WC2026Prdct/predictions').set(appState.predictions || {});
     await db.ref('WC2026Prdct/departments').set(appState.departments || []);
@@ -976,13 +976,11 @@ async function saveState() {
     if (appState.results) {
       await db.ref('WC2026Prdct/results').set(appState.results);
     }
-    
-    // If your app updates a specific matches array state variable:
     if (appState.matches) {
       await db.ref('WC2026Prdct/matches').set(appState.matches);
     }
 
-    console.log("Cloud sync successful!");
+    console.log("Cloud database update successful!");
   } catch (error) {
     console.error("Cloud synchronization failed:", error);
   }
@@ -990,12 +988,11 @@ async function saveState() {
 
 async function loadState() {
   try {
-    console.log("Loading latest scores and rosters from cloud...");
+    console.log("Syncing latest game data from Firebase...");
     const snapshot = await db.ref('WC2026Prdct').once('value');
     const data = snapshot.val();
 
     if (data) {
-      // Maps folders directly to memory arrays safely
       appState.players = data.players || [];
       appState.predictions = data.predictions || {};
       appState.results = data.results || {};
@@ -1004,14 +1001,14 @@ async function loadState() {
       if (data.matches) {
         appState.matches = data.matches;
       }
-      console.log("Database successfully synchronized.");
+      console.log("Data sync complete. Players loaded:", appState.players.length);
     } else {
-      console.warn("Database root node empty. Initializing structures.");
+      console.warn("Database node empty. Initializing memory states.");
       appState.players = [];
       appState.predictions = {};
     }
   } catch (error) {
-    console.error("Database connection lost. Using local cache:", error);
+    console.error("Firebase connection lost. Falling back to local cache:", error);
     const local = localStorage.getItem('wc2026_appState');
     if (local) appState = JSON.parse(local);
   }
@@ -1248,7 +1245,7 @@ async function adminLogin() {
   const errorAlert = document.getElementById("adminError");
 
   try {
-    // 🛡️ SECURE LOOKUP: Point explicitly to your bucket path
+    // Read the password securely using the open read rule
     const snapshot = await db.ref('WC2026Prdct/security/adminPassword').once('value');
     const secureAdminPassword = snapshot.val();
 
@@ -1263,7 +1260,7 @@ async function adminLogin() {
     }
   } catch (error) {
     console.error("Authentication failed:", error);
-    errorAlert.textContent = "Access Denied: Invalid Admin Credentials.";
+    errorAlert.textContent = "Connection error. Please try again.";
     errorAlert.classList.remove("hidden");
   }
 }
