@@ -986,19 +986,55 @@ function getMatchMultiplier(mid){
 // ═══════════════════════════════════════════════════
 // FIREBASE STORAGE
 // ═══════════════════════════════════════════════════
-async function saveState(){
-  try{await db.ref('WC2026Prdct').set(appState);}
-  catch(e){console.error('Save error:',e);try{localStorage.setItem('WC2026Prdct_v2',JSON.stringify(appState));}catch(e2){}}
+async function saveState() {
+  try {
+    // Keep a local safety backup in the browser
+    localStorage.setItem('wc2026_appState', JSON.stringify(appState));
+    
+    // Save data tracks individually so they NEVER touch or overwrite the security folder
+    await db.ref('WC2026Prdct/players').set(appState.players || []);
+    await db.ref('WC2026Prdct/predictions').set(appState.predictions || {});
+    await db.ref('WC2026Prdct/departments').set(appState.departments || []);
+    
+    if (appState.results) {
+      await db.ref('WC2026Prdct/results').set(appState.results);
+    }
+    if (appState.matches) {
+      await db.ref('WC2026Prdct/matches').set(appState.matches);
+    }
+
+    console.log("Cloud database update successful!");
+  } catch (error) {
+    console.error("Cloud synchronization failed:", error);
+  }
 }
 
-async function loadState(){
-  try{
-    const snapshot=await db.ref('WC2026Prdct').once('value');
-    const data=snapshot.val();
-    if(data){appState={players:data.players||{},results:data.results||{},predictions:data.predictions||{},departments:data.departments||[...DEFAULT_DEPTS],knockoutMatches:data.knockoutMatches||[]};}
-  }catch(e){
-    console.error('Load error:',e);
-    try{const ls=localStorage.getItem('WC2026Prdct_v2');if(ls){const p=JSON.parse(ls);appState={players:{},results:{},predictions:{},departments:[...DEFAULT_DEPTS],knockoutMatches:[],...p};}}catch(e2){}
+async function loadState() {
+  try {
+    console.log("Syncing latest tournament rosters from Firebase...");
+    const snapshot = await db.ref('WC2026Prdct').once('value');
+    const data = snapshot.val();
+
+    if (data) {
+      // Correctly read data fields directly into active runtime memory structures
+      appState.players = data.players || [];
+      appState.predictions = data.predictions || {};
+      appState.results = data.results || {};
+      appState.departments = data.departments || [];
+      
+      if (data.matches) {
+        appState.matches = data.matches;
+      }
+      console.log("Data sync complete. Loaded players:", appState.players.length);
+    } else {
+      console.warn("Database empty. Initializing structures.");
+      appState.players = [];
+      appState.predictions = {};
+    }
+  } catch (error) {
+    console.error("Database sync failed. Using local storage cache:", error);
+    const local = localStorage.getItem('wc2026_appState');
+    if (local) appState = JSON.parse(local);
   }
 }
 
@@ -1233,11 +1269,11 @@ async function adminLogin() {
   const errorAlert = document.getElementById("adminError");
 
   try {
-    // Safely look up the password string value from your Firebase Database tree
+    // Fetches the password string securely from your database bucket path
     const snapshot = await db.ref('WC2026Prdct/security/adminPassword').once('value');
     const secureAdminPassword = snapshot.val();
 
-    if (userField === 'Admin' && pwField === secureAdminPassword) {
+    if (userField === 'Admin' && pwField === secureAdminPassword && secureAdminPassword !== null) {
       isAdmin = true;
       errorAlert.classList.add("hidden");
       closeAdminLogin();
