@@ -986,19 +986,62 @@ function getMatchMultiplier(mid){
 // ═══════════════════════════════════════════════════
 // FIREBASE STORAGE
 // ═══════════════════════════════════════════════════
-async function saveState(){
-  try{await db.ref('WC2026Prdct').set(appState);}
-  catch(e){console.error('Save error:',e);try{localStorage.setItem('WC2026Prdct_v2',JSON.stringify(appState));}catch(e2){}}
+async function saveState() {
+  try {
+    // Keep a local storage backup on the user's machine
+    localStorage.setItem('wc2026_appState', JSON.stringify(appState));
+    
+    // Save data chunks cleanly to their individual paths
+    // This explicitly prevents overwriting or wiping the security folder!
+    await db.ref('players').set(appState.players || []);
+    await db.ref('predictions').set(appState.predictions || {});
+    await db.ref('departments').set(appState.departments || []);
+    
+    if (appState.results) {
+      await db.ref('results').set(appState.results);
+    }
+    if (appState.matches) {
+      await db.ref('matches').set(appState.matches);
+    }
+
+    console.log("Cloud sync successful!");
+  } catch (error) {
+    console.error("Cloud synchronization rejected by security rules:", error);
+  }
 }
 
-async function loadState(){
-  try{
-    const snapshot=await db.ref('WC2026Prdct').once('value');
-    const data=snapshot.val();
-    if(data){appState={players:data.players||{},results:data.results||{},predictions:data.predictions||{},departments:data.departments||[...DEFAULT_DEPTS],knockoutMatches:data.knockoutMatches||[]};}
-  }catch(e){
-    console.error('Load error:',e);
-    try{const ls=localStorage.getItem('WC2026Prdct_v2');if(ls){const p=JSON.parse(ls);appState={players:{},results:{},predictions:{},departments:[...DEFAULT_DEPTS],knockoutMatches:[],...p};}}catch(e2){}
+async function loadState() {
+  try {
+    console.log("Syncing latest game data from Firebase...");
+    // Read directly from the database root container safely
+    const snapshot = await db.ref().once('value');
+    const data = snapshot.val();
+
+    if (data) {
+      // Load data structures into your active app memory state
+      appState.players = data.players || [];
+      appState.predictions = data.predictions || {};
+      appState.results = data.results || {};
+      appState.departments = data.departments || [];
+      
+      if (data.matches) {
+        appState.matches = data.matches;
+      }
+      console.log("Sync complete! Registered players loaded:", appState.players.length);
+    } else {
+      console.warn("Database is completely empty. Initializing empty arrays.");
+      appState.players = [];
+      appState.predictions = {};
+    }
+
+    // 🎯 RE-RENDER INITIALIZATION: Trigger your login layout setup
+    if (typeof initApp === 'function') initApp();
+    else if (typeof renderLoginDropdown === 'function') renderLoginDropdown();
+    
+  } catch (error) {
+    console.error("Database connection failed. Falling back to local device memory:", error);
+    const local = localStorage.getItem('wc2026_appState');
+    if (local) appState = JSON.parse(local);
   }
 }
 
@@ -1233,11 +1276,11 @@ async function adminLogin() {
   const errorAlert = document.getElementById("adminError");
 
   try {
-    // Safely look up the password string value from your Firebase Database tree
-    const snapshot = await db.ref('WC2026Prdct/security/adminPassword').once('value');
+    // Read the password string directly from its secure location path
+    const snapshot = await db.ref('security/adminPassword').once('value');
     const secureAdminPassword = snapshot.val();
 
-    if (userField === 'Admin' && pwField === secureAdminPassword) {
+    if (userField === 'Admin' && pwField === secureAdminPassword && secureAdminPassword !== null) {
       isAdmin = true;
       errorAlert.classList.add("hidden");
       closeAdminLogin();
@@ -1247,12 +1290,12 @@ async function adminLogin() {
       errorAlert.classList.remove("hidden");
     }
   } catch (error) {
-    console.error("Authentication failed:", error);
-    errorAlert.textContent = "Connection error. Please try again.";
+    console.error("Admin verification routine failed:", error);
+    errorAlert.textContent = "Error authenticating credentials.";
     errorAlert.classList.remove("hidden");
   }
 }
-function signOut(){currentUser=null;isAdmin=false;realtimeSyncEnabled=false;location.reload();}
+function signOut() { location.reload(); }
 
 // ═══════════════════════════════════════════════════
 // INIT
@@ -1261,17 +1304,19 @@ function initApp(){
   document.getElementById('regModal').classList.add('hidden');
   document.getElementById('loginModal').classList.add('hidden');
   ['appHeader','appHero','appNav','appMain','appFooter'].forEach(id=>document.getElementById(id).style.display='');
-  document.getElementById('headerUser').textContent=`${currentUser.teamFlag} ${currentUser.name}`;
+  document.getElementById('headerUser').textContent = `${currentUser?.teamFlag || ''} ${currentUser?.name || 'Guest'}`;
   document.getElementById('heroPlayers').textContent=Object.keys(appState.players).length;
   document.getElementById('heroResults').textContent=Object.keys(appState.results).length;
   document.getElementById('heroMatches').textContent=getAllMatches().length;
   if(isAdmin)document.getElementById('adminTab').classList.remove('hidden');
-  if(currentUser.id!=='__admin__'){
-    document.getElementById('ubFlag').textContent=currentUser.teamFlag||'⚽';
-    document.getElementById('ubName').textContent=currentUser.name;
-    document.getElementById('ubDept').textContent=currentUser.dept;
-    document.getElementById('userBar').style.display='';
-  } else { document.getElementById('userBar').style.display='none'; }
+ if (currentUser && currentUser.id !== '__admin__') {
+  document.getElementById('ubFlag').textContent = currentUser.teamFlag || '⚽';
+  document.getElementById('ubName').textContent = currentUser.name || 'Guest';
+  document.getElementById('ubDept').textContent = currentUser.dept || '';
+  document.getElementById('userBar').style.display = '';
+} else { 
+  document.getElementById('userBar').style.display = 'none'; 
+}
   updateUserPts();renderMatches();renderLeaderboard();renderWCResults();renderAnalytics();startCountdown();
   if(isAdmin)renderAdmin();
   realtimeSyncEnabled=true;
