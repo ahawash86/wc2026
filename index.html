@@ -1304,7 +1304,7 @@ function initApp(){
   document.getElementById('regModal').classList.add('hidden');
   document.getElementById('loginModal').classList.add('hidden');
   ['appHeader','appHero','appNav','appMain','appFooter'].forEach(id=>document.getElementById(id).style.display='');
-  document.getElementById('headerUser').textContent=`${currentUser.teamFlag} ${currentUser.name}`;
+  document.getElementById('headerUser').textContent = `${currentUser?.teamFlag || ''} ${currentUser?.name || 'Guest'}`;
   document.getElementById('heroPlayers').textContent=Object.keys(appState.players).length;
   document.getElementById('heroResults').textContent=Object.keys(appState.results).length;
   document.getElementById('heroMatches').textContent=getAllMatches().length;
