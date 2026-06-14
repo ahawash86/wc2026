@@ -1309,12 +1309,14 @@ function initApp(){
   document.getElementById('heroResults').textContent=Object.keys(appState.results).length;
   document.getElementById('heroMatches').textContent=getAllMatches().length;
   if(isAdmin)document.getElementById('adminTab').classList.remove('hidden');
-  if(currentUser.id!=='__admin__'){
-    document.getElementById('ubFlag').textContent=currentUser.teamFlag||'⚽';
-    document.getElementById('ubName').textContent=currentUser.name;
-    document.getElementById('ubDept').textContent=currentUser.dept;
-    document.getElementById('userBar').style.display='';
-  } else { document.getElementById('userBar').style.display='none'; }
+ if (currentUser && currentUser.id !== '__admin__') {
+  document.getElementById('ubFlag').textContent = currentUser.teamFlag || '⚽';
+  document.getElementById('ubName').textContent = currentUser.name || 'Guest';
+  document.getElementById('ubDept').textContent = currentUser.dept || '';
+  document.getElementById('userBar').style.display = '';
+} else { 
+  document.getElementById('userBar').style.display = 'none'; 
+}
   updateUserPts();renderMatches();renderLeaderboard();renderWCResults();renderAnalytics();startCountdown();
   if(isAdmin)renderAdmin();
   realtimeSyncEnabled=true;
