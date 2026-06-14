@@ -988,35 +988,37 @@ function getMatchMultiplier(mid){
 // ═══════════════════════════════════════════════════
 async function saveState() {
   try {
-    // Keep a local safety backup in the browser
+    // Keep a local storage backup on the user's machine
     localStorage.setItem('wc2026_appState', JSON.stringify(appState));
     
-    // Save data tracks individually so they NEVER touch or overwrite the security folder
-    await db.ref('WC2026Prdct/players').set(appState.players || []);
-    await db.ref('WC2026Prdct/predictions').set(appState.predictions || {});
-    await db.ref('WC2026Prdct/departments').set(appState.departments || []);
+    // Save data chunks cleanly to their individual paths
+    // This explicitly prevents overwriting or wiping the security folder!
+    await db.ref('players').set(appState.players || []);
+    await db.ref('predictions').set(appState.predictions || {});
+    await db.ref('departments').set(appState.departments || []);
     
     if (appState.results) {
-      await db.ref('WC2026Prdct/results').set(appState.results);
+      await db.ref('results').set(appState.results);
     }
     if (appState.matches) {
-      await db.ref('WC2026Prdct/matches').set(appState.matches);
+      await db.ref('matches').set(appState.matches);
     }
 
-    console.log("Cloud database update successful!");
+    console.log("Cloud sync successful!");
   } catch (error) {
-    console.error("Cloud synchronization failed:", error);
+    console.error("Cloud synchronization rejected by security rules:", error);
   }
 }
 
 async function loadState() {
   try {
-    console.log("Syncing latest tournament rosters from Firebase...");
-    const snapshot = await db.ref('WC2026Prdct').once('value');
+    console.log("Syncing latest game data from Firebase...");
+    // Read directly from the database root container safely
+    const snapshot = await db.ref().once('value');
     const data = snapshot.val();
 
     if (data) {
-      // Correctly read data fields directly into active runtime memory structures
+      // Load data structures into your active app memory state
       appState.players = data.players || [];
       appState.predictions = data.predictions || {};
       appState.results = data.results || {};
@@ -1025,14 +1027,19 @@ async function loadState() {
       if (data.matches) {
         appState.matches = data.matches;
       }
-      console.log("Data sync complete. Loaded players:", appState.players.length);
+      console.log("Sync complete! Registered players loaded:", appState.players.length);
     } else {
-      console.warn("Database empty. Initializing structures.");
+      console.warn("Database is completely empty. Initializing empty arrays.");
       appState.players = [];
       appState.predictions = {};
     }
+
+    // 🎯 RE-RENDER INITIALIZATION: Trigger your login layout setup
+    if (typeof initApp === 'function') initApp();
+    else if (typeof renderLoginDropdown === 'function') renderLoginDropdown();
+    
   } catch (error) {
-    console.error("Database sync failed. Using local storage cache:", error);
+    console.error("Database connection failed. Falling back to local device memory:", error);
     const local = localStorage.getItem('wc2026_appState');
     if (local) appState = JSON.parse(local);
   }
@@ -1269,8 +1276,8 @@ async function adminLogin() {
   const errorAlert = document.getElementById("adminError");
 
   try {
-    // Fetches the password string securely from your database bucket path
-    const snapshot = await db.ref('WC2026Prdct/security/adminPassword').once('value');
+    // Read the password string directly from its secure location path
+    const snapshot = await db.ref('security/adminPassword').once('value');
     const secureAdminPassword = snapshot.val();
 
     if (userField === 'Admin' && pwField === secureAdminPassword && secureAdminPassword !== null) {
@@ -1283,12 +1290,12 @@ async function adminLogin() {
       errorAlert.classList.remove("hidden");
     }
   } catch (error) {
-    console.error("Authentication failed:", error);
-    errorAlert.textContent = "Connection error. Please try again.";
+    console.error("Admin verification routine failed:", error);
+    errorAlert.textContent = "Error authenticating credentials.";
     errorAlert.classList.remove("hidden");
   }
 }
-function signOut(){currentUser=null;isAdmin=false;realtimeSyncEnabled=false;location.reload();}
+function signOut() { location.reload(); }
 
 // ═══════════════════════════════════════════════════
 // INIT
