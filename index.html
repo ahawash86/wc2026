@@ -1046,7 +1046,7 @@ async function loadState() {
 }
 
 function setupRealtimeSync(){
-  db.ref('WC2026Prdct').on('value',(snapshot)=>{
+  db.ref().on('value',(snapshot)=>{
     if(!realtimeSyncEnabled)return;
     const data=snapshot.val();if(!data)return;
     appState={players:data.players||{},results:data.results||{},predictions:data.predictions||{},departments:data.departments||[...DEFAULT_DEPTS],knockoutMatches:data.knockoutMatches||[]};
