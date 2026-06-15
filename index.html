@@ -988,20 +988,18 @@ function getMatchMultiplier(mid){
 // ═══════════════════════════════════════════════════
 async function saveState() {
   try {
-    // Keep a local storage backup on the user's machine
     localStorage.setItem('wc2026_appState', JSON.stringify(appState));
     
-    // Save data chunks cleanly to their individual paths
-    // This explicitly prevents overwriting or wiping the security folder!
-    await db.ref('players').set(appState.players || []);
-    await db.ref('predictions').set(appState.predictions || {});
-    await db.ref('departments').set(appState.departments || []);
+    // Add 'WC2026Prdct/' to every single path!
+    await db.ref('WC2026Prdct/players').set(appState.players || {});
+    await db.ref('WC2026Prdct/predictions').set(appState.predictions || {});
+    await db.ref('WC2026Prdct/departments').set(appState.departments || []);
     
     if (appState.results) {
-      await db.ref('results').set(appState.results);
+      await db.ref('WC2026Prdct/results').set(appState.results);
     }
-    if (appState.matches) {
-      await db.ref('matches').set(appState.matches);
+    if (appState.knockoutMatches) {
+      await db.ref('WC2026Prdct/knockoutMatches').set(appState.knockoutMatches);
     }
 
     console.log("Cloud sync successful!");
@@ -1014,7 +1012,7 @@ async function loadState() {
   try {
     console.log("Syncing latest game data from Firebase...");
     // Read directly from the database root container safely
-    const snapshot = await db.ref().once('value');
+    const snapshot = await db.ref('WC2026Prdct').once('value');
     const data = snapshot.val();
 
     if (data) {
@@ -1046,7 +1044,7 @@ async function loadState() {
 }
 
 function setupRealtimeSync(){
-  db.ref().on('value',(snapshot)=>{
+  db.ref('WC2026Prdct').on('value',(snapshot)=>{
     if(!realtimeSyncEnabled)return;
     const data=snapshot.val();if(!data)return;
     appState={players:data.players||{},results:data.results||{},predictions:data.predictions||{},departments:data.departments||[...DEFAULT_DEPTS],knockoutMatches:data.knockoutMatches||[]};
@@ -1277,7 +1275,7 @@ async function adminLogin() {
 
   try {
     // Read the password string directly from its secure location path
-    const snapshot = await db.ref('security/adminPassword').once('value');
+    const snapshot = await db.ref('WC2026Prdct/security/adminPassword').once('value');
     const secureAdminPassword = snapshot.val();
 
     if (userField === 'Admin' && pwField === secureAdminPassword && secureAdminPassword !== null) {
