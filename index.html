@@ -1166,7 +1166,15 @@ function launchConfetti(){
   setTimeout(()=>{c.innerHTML='';},4000);
 }
 
-function changeTZ(){tzOffset=parseInt(document.getElementById('tzSelect').value);renderMatches();startCountdown();if(document.getElementById('sec-wcresults').classList.contains('active'))renderWCResults();}
+function changeTZ() {
+  tzOffset = parseInt(document.getElementById('tzSelect').value);
+  renderMatches();
+  startCountdown();
+  if (document.getElementById('sec-wcresults').classList.contains('active')) renderWCResults();
+  
+  // NEW: Force the Admin panel to recalculate match times so it never falls out of sync
+  if (isAdmin) renderAdmin();
+}
 function setSortMode(mode,btn){sortMode=mode;document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderMatches();}
 
 // ═══════════════════════════════════════════════════
@@ -1830,13 +1838,27 @@ async function removeDepartment(name){
 }
 
 function renderAdminMatches(){
-  const container=document.getElementById('adminMatchList');container.innerHTML='';
-  MATCHES.forEach(match=>{
-    const ht=getTeam(match.home),at=getTeam(match.away),res=getResult(match.id);
-    const row=document.createElement('div');row.className='admin-match-row';
-    row.innerHTML=`
-      <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">Group ${match.group} · ${formatTime(match.utc)}</div>
-      <div class="admin-match-teams">${ht.flag} ${match.home} vs ${match.away} ${at.flag}</div></div>
+  const container = document.getElementById('adminMatchList');
+  container.innerHTML = '';
+
+  // 1. Create a shallow copy and sort it by date
+  // Assuming 'match.utc' contains the date/time string or timestamp
+  const sortedMatches = [...MATCHES].sort((a, b) => {
+    return new Date(a.utc) - new Date(b.utc);
+  });
+
+  // 2. Use the sorted array instead of the original
+  sortedMatches.forEach(match => {
+    const ht = getTeam(match.home), at = getTeam(match.away), res = getResult(match.id);
+    const row = document.createElement('div');
+    row.className = 'admin-match-row';
+    row.innerHTML = `
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">
+          Group ${match.group} · ${formatTime(match.utc)}
+        </div>
+        <div class="admin-match-teams">${ht.flag} ${match.home} vs ${match.away} ${at.flag}</div>
+      </div>
       <div class="admin-score-group">
         <input class="admin-score-input" id="res_${match.id}_h" type="number" min="0" max="20" value="${res?res.home:''}" placeholder="H">
         <span style="color:var(--text-dim);font-weight:700">–</span>
@@ -1844,7 +1866,7 @@ function renderAdminMatches(){
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <button class="btn-save-result" onclick="saveResult('${match.id}')">Save</button>
-        ${res?`<span class="result-saved">✓ ${res.home}–${res.away}</span>`:''}
+        ${res ? `<span class="result-saved">✓ ${res.home}–${res.away}</span>` : ''}
       </div>`;
     container.appendChild(row);
   });
@@ -1901,7 +1923,7 @@ async function addKnockoutMatch(){
   if(!home||!away)return showToast('Select both teams.','red');
   if(home===away)return showToast('Teams must be different.','red');
   if(!dateVal)return showToast('Set date and time.','red');
-  const utc=new Date(dateVal).toISOString();
+  const utc=new Date(dateVal + 'Z').toISOString();
   const id='KO_'+Date.now()+'_'+Math.random().toString(36).substr(2,4);
   if(!appState.knockoutMatches)appState.knockoutMatches=[];
   appState.knockoutMatches.push({id,stage,home,away,venue:venue||'TBD',utc,group:stage});
