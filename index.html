@@ -183,6 +183,7 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--text);min
 /* STAGE MULTIPLIER BADGE */
 .multiplier-badge{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-left:6px}
 .mult-r32{background:rgba(52,152,219,0.15);color:#3498DB;border:1px solid rgba(52,152,219,0.3)}
+.mult-r16{background:rgba(26,188,156,0.15);color:#1ABC9C;border:1px solid rgba(26,188,156,0.3)} /* <-- ADDED */
 .mult-qf{background:rgba(155,89,182,0.15);color:#9B59B6;border:1px solid rgba(155,89,182,0.3)}
 .mult-sf{background:rgba(243,156,18,0.15);color:#F39C12;border:1px solid rgba(243,156,18,0.3)}
 .mult-final{background:rgba(201,168,76,0.2);color:var(--gold);border:1px solid rgba(201,168,76,0.4);animation:goldPulse 2s ease-in-out infinite}
@@ -279,6 +280,7 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--text);min
 /* KNOCKOUT BRACKET */
 .ko-stage-label{font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;letter-spacing:1px;text-transform:uppercase;padding:10px 20px;border-radius:var(--radius-sm);margin-bottom:16px;display:inline-flex;align-items:center;gap:10px}
 .ko-r32{background:rgba(52,152,219,0.1);color:#3498DB;border:1px solid rgba(52,152,219,0.25)}
+.ko-r16{background:rgba(26,188,156,0.1);color:#1ABC9C;border:1px solid rgba(26,188,156,0.25)} /* <-- ADDED */
 .ko-qf{background:rgba(155,89,182,0.1);color:#9B59B6;border:1px solid rgba(155,89,182,0.25)}
 .ko-sf{background:rgba(243,156,18,0.1);color:#F39C12;border:1px solid rgba(243,156,18,0.25)}
 .ko-final{background:rgba(201,168,76,0.15);color:var(--gold);border:1px solid rgba(201,168,76,0.35)}
@@ -665,6 +667,7 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--text);min
       <thead><tr><th>Stage</th><th>Multiplier</th><th>Exact Score</th><th style="text-align:right">Correct Result</th></tr></thead>
       <tbody>
         <tr><td><span class="multiplier-badge mult-r32">Round of 32</span></td><td><strong>×1</strong></td><td><strong class="text-gold">3 pts</strong></td><td style="text-align:right"><strong style="color:var(--green)">1 pt</strong></td></tr>
+        <tr><td><span class="multiplier-badge mult-r16">Round of 16</span></td><td><strong>×1</strong></td><td><strong class="text-gold">3 pts</strong></td><td style="text-align:right"><strong style="color:var(--green)">1 pt</strong></td></tr>
         <tr><td><span class="multiplier-badge mult-qf">Quarter-Final</span></td><td><strong>×2</strong></td><td><strong class="text-gold">6 pts</strong></td><td style="text-align:right"><strong style="color:var(--green)">2 pts</strong></td></tr>
         <tr><td><span class="multiplier-badge mult-sf">Semi-Final</span></td><td><strong>×3</strong></td><td><strong class="text-gold">9 pts</strong></td><td style="text-align:right"><strong style="color:var(--green)">3 pts</strong></td></tr>
         <tr><td><span class="multiplier-badge mult-final">🏆 Final</span></td><td><strong>×5</strong></td><td><strong class="text-gold">15 pts</strong></td><td style="text-align:right"><strong style="color:var(--green)">5 pts</strong></td></tr>
@@ -755,6 +758,7 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--text);min
         <div class="form-group"><label class="form-label">Stage</label>
           <select class="form-select" id="koStage">
             <option value="R32">Round of 32</option>
+            <option value="R16">Round of 16</option>
             <option value="QF">Quarter-Final</option>
             <option value="SF">Semi-Final</option>
             <option value="FINAL">Final</option>
@@ -805,10 +809,10 @@ let countdownInterval = null;
 let tzOffset = 4;
 let sortMode = 'knockout';
 
-const STAGE_MULTIPLIERS = { GROUP:1, R32:1, QF:2, SF:3, FINAL:5 };
-const STAGE_LABELS = { R32:'Round of 32', QF:'Quarter-Final', SF:'Semi-Final', FINAL:'Final' };
-const STAGE_CSS = { R32:'mult-r32', QF:'mult-qf', SF:'mult-sf', FINAL:'mult-final' };
-const KO_STAGE_CSS = { R32:'ko-r32', QF:'ko-qf', SF:'ko-sf', FINAL:'ko-final' };
+const STAGE_MULTIPLIERS = { GROUP:1, R32:1, R16:1, QF:2, SF:3, FINAL:5 };
+const STAGE_LABELS = { R32:'Round of 32', R16:'Round of 16', QF:'Quarter-Final', SF:'Semi-Final', FINAL:'Final' };
+const STAGE_CSS = { R32:'mult-r32', R16:'mult-r16', QF:'mult-qf', SF:'mult-sf', FINAL:'mult-final' };
+const KO_STAGE_CSS = { R32:'ko-r32', R16:'ko-r16', QF:'ko-qf', SF:'ko-sf', FINAL:'ko-final' };
 
 const TEAMS = [
   {name:'Mexico',flag:'🇲🇽'},{name:'South Korea',flag:'🇰🇷'},{name:'Czechia',flag:'🇨🇿'},{name:'South Africa',flag:'🇿🇦'},
@@ -1393,7 +1397,7 @@ function renderMatches(){
     // Show knockout section in group view too
     const koM=allM.filter(m=>m.stage!=='GROUP');
     if(koM.length){
-      ['R32','QF','SF','FINAL'].forEach(stage=>{
+      ['FINAL','SF','QF','R16','R32'].forEach(stage=>{
         const sm=koM.filter(m=>m.stage===stage);
         if(!sm.length)return;
         const s=document.createElement('div');s.className='group-section';
@@ -1744,7 +1748,7 @@ function renderWCResults(){
   const koM=allM.filter(m=>m.stage!=='GROUP'&&hasResult(m.id));
   if(koM.length){
     koC.innerHTML=`<div class="section-label" style="margin-top:28px">🏆 Knockout Results</div>`;
-    ['R32','QF','SF','FINAL'].forEach(stage=>{
+    ['FINAL','SF','QF','R16','R32'].forEach(stage=>{
       const sm=koM.filter(m=>m.stage===stage);if(!sm.length)return;
       const wrap=document.createElement('div');wrap.style.marginBottom='16px';
       wrap.innerHTML=`<div class="ko-stage-label ${KO_STAGE_CSS[stage]}" style="margin-bottom:12px">${STAGE_LABELS[stage]}</div>`;
