@@ -22,7 +22,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;overflow-x:hidden}
 
-/** LOADING SCREEN **/
+/*** LOADING SCREEN ***/
 .loading-screen{position:fixed;inset:0;background:var(--dark);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s,visibility .5s}
 .loading-screen.hidden{opacity:0;visibility:hidden}
 .loading-logo{width:120px;height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:24px;animation:pulse 1.5s ease-in-out infinite}
@@ -553,9 +553,9 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--text);min
   </div>
   <div class="sort-controls">
     <span class="sort-label">Sort by:</span>
-    <button class="sort-btn active" id="sortByDate" onclick="setSortMode('date',this)">📅 Date</button>
+    <button class="sort-btn" id="sortByDate" onclick="setSortMode('date',this)">📅 Date</button>
     <button class="sort-btn" id="sortByGroup" onclick="setSortMode('group',this)">📁 Group</button>
-    <button class="sort-btn" id="sortByKO" onclick="setSortMode('knockout',this)">🏆 Knockout</button>
+    <button class="sort-btn active" id="sortByKO" onclick="setSortMode('knockout',this)">🏆 Knockout</button>
   </div>
   <div id="matchesContainer"></div>
 </div>
@@ -807,7 +807,7 @@ let countdownInterval = null;
 // CONSTANTS
 // ═══════════════════════════════════════════════════
 let tzOffset = 4;
-let sortMode = 'date';
+let sortMode = 'knockout';
 
 const STAGE_MULTIPLIERS = { GROUP:1, R32:1, R16:1, QF:2, SF:3, FINAL:5 };
 const STAGE_LABELS = { R32:'Round of 32', R16:'Round of 16', QF:'Quarter-Final', SF:'Semi-Final', FINAL:'Final' };
@@ -1323,6 +1323,15 @@ function initApp(){
   if(isAdmin)renderAdmin();
   realtimeSyncEnabled=true;
   setupScrollAnimations();
+
+ // R16 One-Time Notification
+  setTimeout(() => {
+    if (currentUser && currentUser.id !== '__admin__' && !localStorage.getItem('wc2026_r16_notified')) {
+      showToast('⚽ Reminder: Round of 16 matches are open! Make your predictions.', 'gold');
+      localStorage.setItem('wc2026_r16_notified', 'true');
+    }
+  }, 2500); 
+
 }
 
 function updateUserPts(){
@@ -1355,7 +1364,7 @@ function renderMatches(){
       container.appendChild(s);
     }
     // Knockout stages
-    ['R32','R16','QF','SF','FINAL'].forEach(stage=>{
+    ['FINAL','SF','QF','R16','R32'].forEach(stage=>{
       const sm=allM.filter(m=>m.stage===stage);
       if(!sm.length)return;
       const s=document.createElement('div');s.className='group-section';
